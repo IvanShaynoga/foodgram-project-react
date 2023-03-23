@@ -56,7 +56,7 @@ jobs:
           username: ${{ secrets.USER }}
           key: ${{ secrets.SSH_KEY }}
           script: |
-            cd foodgram-project-react/infra
+            cd infra
             sudo docker pull sheshkere/diplo_back:latest
             sudo docker pull sheshkere/diplo:v1
             sudo docker-compose stop
