@@ -2,8 +2,7 @@ from rest_framework.permissions import SAFE_METHODS, BasePermission
 
 
 class IsAuthorPermission(BasePermission):
-    """Делаем так, чтобы изменять и добавлять объекты
-       мог только их автор"""
+    """Только автор может изменять и добавлять объект"""
 
     def has_object_permission(self, request, view, obj):
         return (request.method in SAFE_METHODS
