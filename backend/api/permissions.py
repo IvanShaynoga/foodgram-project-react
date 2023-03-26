@@ -1,7 +1,7 @@
 from rest_framework.permissions import SAFE_METHODS, BasePermission
 
 
-class AuthorPermission(BasePermission):
+class IsAuthorPermission(BasePermission):
     """Делаем так, чтобы изменять и добавлять объекты
        мог только их автор"""
 

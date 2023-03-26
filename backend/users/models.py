@@ -23,6 +23,7 @@ class User(AbstractUser):
         unique=True
     )
     username = models.CharField(
+        db_index=True,
         verbose_name='username',
         max_length=settings.LENGTH_OF_FIELDS_USER_2,
         unique=True,

@@ -1,4 +1,3 @@
-from django.db.models import Sum
 from django.http.response import HttpResponse
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
@@ -9,13 +8,13 @@ from rest_framework.permissions import (IsAuthenticated,
                                         IsAuthenticatedOrReadOnly)
 from rest_framework.response import Response
 
-from recipes.models import (Favorite, Ingredient, IngredientRecipe, Recipe,
+from recipes.models import (Favorite, Ingredient, Recipe,
                             ShoppingCart, Tag)
 from users.models import Follow, User
-
+from . import services
 from .filters import IngredientFilter, RecipeFilter
 from .pagination import CustomPagination
-from .permissions import AuthorPermission
+from .permissions import IsAuthorPermission
 from .serializers import (CreateRecipeSerializer, FavoriteSerializer,
                           IngredientSerializer, RecipeReadSerializer,
                           ShoppingCartSerializer, SubscribeListSerializer,
@@ -29,7 +28,6 @@ class IngredientViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = (IsAuthenticatedOrReadOnly, )
     filter_backends = (IngredientFilter, )
     search_fields = ('^name', )
-    pagination_class = None
 
 
 class TagViewSet(viewsets.ModelViewSet):
@@ -44,7 +42,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
     """ Вывод работы с рецептами """
     queryset = Recipe.objects.all()
     serializer_class = CreateRecipeSerializer
-    permission_classes = (AuthorPermission, )
+    permission_classes = (IsAuthorPermission, )
     pagination_class = CustomPagination
     filter_backends = (DjangoFilterBackend, )
     filterset_class = RecipeFilter
@@ -56,12 +54,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
 
     @staticmethod
     def send_message(ingredients):
-        shopping_list = 'Купить в магазине:'
-        for ingredient in ingredients:
-            shopping_list += (
-                f"\n{ingredient['ingredient__name']} "
-                f"({ingredient['ingredient__measurement_unit']}) - "
-                f"{ingredient['amount']}")
+        shopping_list = services.get_shopping_list(ingredients)
         file = 'shopping_list.txt'
         response = HttpResponse(shopping_list, content_type='text/plain')
         response['Content-Disposition'] = f'attachment; filename="{file}.txt"'
@@ -69,11 +62,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['GET'])
     def download_shopping_cart(self, request):
-        ingredients = IngredientRecipe.objects.filter(
-            recipe__shopping_list__user=request.user
-        ).order_by('ingredient__name').values(
-            'ingredient__name', 'ingredient__measurement_unit'
-        ).annotate(amount=Sum('amount'))
+        ingredients = services.get_ingredients_shopping_card(request)
         return self.send_message(ingredients)
 
     @action(
@@ -148,12 +137,6 @@ class UserViewSet(UserViewSet):
             serializer.is_valid(raise_exception=True)
             Follow.objects.create(user=user, author=author)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
-
-        if request.method == 'DELETE':
-            get_object_or_404(
-                Follow, user=user, author=author
-            ).delete()
-            return Response(status=status.HTTP_204_NO_CONTENT)
 
     @action(detail=False, permission_classes=[IsAuthenticated])
     def subscriptions(self, request):
